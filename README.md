@@ -18,9 +18,6 @@ Paste any suspicious email into the tool. It sends the content to Claude (Anthro
 
 ---
 
-## Screenshots
-
-> *(Add a screenshot here — analyze a test email, take a screenshot, upload it to the repo as `screenshot.png`, and replace this line with: `![Phishing Analyzer screenshot](screenshot.png)`)*
 
 ---
 
@@ -98,13 +95,13 @@ PayPal Security Team
 
 This project was built as part of my journey into cybersecurity. I'm currently:
 
-- 📚 Studying on TryHackMe (top X%)
+- 📚 Studying on TryHackMe.
 - 🎯 Preparing for CompTIA Security+
 - 🔐 Specializing in Identity & Access Management (IAM)
 - 🛠 Building hands-on projects to document real skills
 
 **GitHub:** [github.com/gaston-dev-web](https://github.com/gaston-dev-web)  
-**LinkedIn:** *(add your LinkedIn URL here)*
+**LinkedIn:** *(https://www.linkedin.com/in/gaston-garcia-45383815b/?locale=en)*
 
 ---
 
