@@ -101,7 +101,7 @@ This project was built as part of my journey into cybersecurity. I'm currently:
 - 🛠 Building hands-on projects to document real skills
 
 **GitHub:** [github.com/gaston-dev-web](https://github.com/gaston-dev-web)  
-**LinkedIn:** *(https://www.linkedin.com/in/gaston-garcia-45383815b/?locale=en)*
+**LinkedIn:** https://www.linkedin.com/in/gaston-garcia-45383815b/?locale=en
 
 ---
 
