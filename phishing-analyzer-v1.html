@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phishing Analyzer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0f12;
+    color: #e2e8f0;
+    font-family: 'Courier New', Courier, monospace;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header { margin-bottom: 2rem; }
+  .header-eyebrow {
+    font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: #ef4444; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #ef4444; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  .header h1 {
+    font-size: 28px; font-weight: 700;
+    color: #f1f5f9; letter-spacing: -0.5px; line-height: 1.15;
+  }
+  .header p {
+    font-size: 13px; color: #64748b; margin-top: 8px;
+    font-family: -apple-system, sans-serif; line-height: 1.65;
+    max-width: 560px;
+  }
+
+  /* ── Input panel ── */
+  .panel {
+    background: #141720; border: 1px solid #1e2535;
+    border-radius: 10px; overflow: hidden; margin-bottom: 1rem;
+  }
+  .panel-header {
+    background: #1a1f2e; padding: 9px 14px;
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #475569;
+    border-bottom: 1px solid #1e2535;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-header-left { display: flex; align-items: center; gap: 8px; }
+
+  .char-count { font-size: 10px; color: #334155; font-family: -apple-system, sans-serif; }
+
+  textarea {
+    width: 100%; background: #141720; border: none; outline: none;
+    color: #94a3b8; font-family: 'Courier New', monospace;
+    font-size: 12px; line-height: 1.75; padding: 16px;
+    resize: vertical; min-height: 190px;
+    transition: color 0.2s;
+  }
+  textarea:focus { color: #cbd5e1; }
+  textarea::placeholder { color: #232b3a; }
+
+  /* ── Buttons row ── */
+  .btn-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+
+  .btn {
+    flex: 1; background: #ef4444; color: white; border: none;
+    border-radius: 8px; padding: 13px;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s, transform 0.1s;
+  }
+  .btn:hover { background: #dc2626; }
+  .btn:active { transform: scale(0.99); }
+  .btn:disabled { background: #1e2535; color: #374151; cursor: not-allowed; }
+
+  .btn-clear {
+    flex: 0 0 auto; background: #1a1f2e; color: #475569;
+    border: 1px solid #1e2535; border-radius: 8px; padding: 13px 18px;
+    font-family: 'Courier New', monospace; font-size: 12px;
+    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .btn-clear:hover { background: #1e2535; color: #64748b; }
+
+  /* ── Error ── */
+  .error-msg {
+    display: none; background: #1a0a0a; border: 1px solid #7f1d1d;
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 1rem;
+    font-size: 12px; color: #f87171;
+    font-family: -apple-system, sans-serif; line-height: 1.6;
+  }
+  .error-msg.visible { display: block; }
+
+  /* ── Loading ── */
+  .loading {
+    display: none; padding: 24px 16px; text-align: center;
+    font-size: 11px; color: #475569; letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .loading.visible { display: block; }
+  .loading-steps {
+    font-family: -apple-system, sans-serif;
+    font-size: 12px; color: #334155;
+    margin-top: 6px; letter-spacing: 0; text-transform: none;
+  }
+  .loading-bar {
+    width: 100%; height: 2px; background: #1e2535;
+    border-radius: 2px; margin-top: 12px; overflow: hidden;
+  }
+  .loading-bar-fill {
+    height: 100%; width: 35%; background: linear-gradient(90deg, #ef4444, #f87171);
+    border-radius: 2px; animation: slide 1.4s ease-in-out infinite;
+  }
+  @keyframes slide { 0%{transform:translateX(-100%)} 100%{transform:translateX(380%)} }
+
+  /* ── Results ── */
+  .results {
+    display: none; background: #141720;
+    border: 1px solid #1e2535; border-radius: 10px; overflow: hidden;
+  }
+  .results.visible { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+  .results-topbar {
+    background: #1a1f2e; padding: 9px 14px;
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #475569;
+    border-bottom: 1px solid #1e2535;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* Copy button */
+  .copy-btn {
+    background: #0f172a; border: 1px solid #1e2535;
+    color: #64748b; border-radius: 5px; padding: 4px 10px;
+    font-size: 10px; font-family: 'Courier New', monospace;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .copy-btn:hover { background: #1e2535; color: #94a3b8; }
+  .copy-btn.copied { background: #052e16; border-color: #166534; color: #4ade80; }
+
+  /* ── Score section ── */
+  .score-section {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid #1e2535;
+  }
+  .score-row { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+
+  .score-circle {
+    width: 68px; height: 68px; border-radius: 50%;
+    border: 3px solid #374151; display: flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0; transition: border-color 0.5s;
+    position: relative;
+  }
+  .score-number {
+    font-size: 24px; font-weight: 700; color: #94a3b8;
+    transition: color 0.5s;
+  }
+
+  .score-meta { flex: 1; }
+  .score-level {
+    font-size: 14px; font-weight: 700;
+    font-family: -apple-system, sans-serif;
+    margin-bottom: 3px; transition: color 0.5s;
+  }
+  .score-sublabel {
+    font-size: 11px; color: #475569;
+    font-family: -apple-system, sans-serif;
+  }
+
+  /* Score bar */
+  .score-bar-wrap { position: relative; }
+  .score-bar-track {
+    width: 100%; height: 6px; background: #1e2535;
+    border-radius: 3px; overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%; width: 0%; border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1), background 0.5s;
+  }
+  .score-bar-labels {
+    display: flex; justify-content: space-between;
+    margin-top: 5px; font-size: 9px; color: #334155;
+    font-family: -apple-system, sans-serif; letter-spacing: 0.05em;
+  }
+
+  /* Color themes */
+  .theme-low  .score-circle { border-color: #166534; }
+  .theme-low  .score-number { color: #4ade80; }
+  .theme-low  .score-level  { color: #4ade80; }
+  .theme-low  .score-bar-fill { background: linear-gradient(90deg, #166534, #4ade80); }
+
+  .theme-mid  .score-circle { border-color: #92400e; }
+  .theme-mid  .score-number { color: #fbbf24; }
+  .theme-mid  .score-level  { color: #fbbf24; }
+  .theme-mid  .score-bar-fill { background: linear-gradient(90deg, #92400e, #fbbf24); }
+
+  .theme-high .score-circle { border-color: #991b1b; }
+  .theme-high .score-number { color: #f87171; }
+  .theme-high .score-level  { color: #f87171; }
+  .theme-high .score-bar-fill { background: linear-gradient(90deg, #991b1b, #ef4444); }
+
+  /* ── Verdict ── */
+  .verdict {
+    margin: 0 16px 4px;
+    padding: 12px 14px;
+    background: #0f172a; border: 1px solid #1e2535;
+    border-radius: 8px; font-size: 12px; color: #94a3b8;
+    font-family: -apple-system, sans-serif; line-height: 1.65;
+  }
+  .verdict strong { color: #cbd5e1; }
+
+  /* ── Findings ── */
+  .findings-header {
+    padding: 14px 16px 6px;
+    font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #334155;
+  }
+  .findings { padding: 0 16px 16px; }
+
+  .finding {
+    display: flex; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #1a1f2e;
+    font-family: -apple-system, sans-serif;
+  }
+  .finding:last-child { border-bottom: none; }
+  .finding-icon { font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  .finding-right { flex: 1; }
+  .finding-title-row {
+    display: flex; align-items: center;
+    gap: 6px; margin-bottom: 3px; flex-wrap: wrap;
+  }
+  .finding-title { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .sev {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 1px 6px; border-radius: 3px;
+  }
+  .sev-high   { background: #450a0a; color: #fca5a5; }
+  .sev-medium { background: #431407; color: #fcd34d; }
+  .sev-low    { background: #052e16; color: #6ee7b7; }
+  .sev-info   { background: #0c1a2e; color: #93c5fd; }
+  .finding-detail { font-size: 12px; color: #64748b; line-height: 1.55; }
+
+  /* ── Footer stamp ── */
+  .report-footer {
+    padding: 10px 16px;
+    border-top: 1px solid #1e2535;
+    font-size: 10px; color: #1e2535;
+    font-family: -apple-system, sans-serif;
+    display: flex; justify-content: space-between;
+  }
+
+  /* ── Page footer ── */
+  .footer-note {
+    margin-top: 1.5rem; font-size: 11px; color: #1e2535;
+    font-family: -apple-system, sans-serif; line-height: 1.6; text-align: center;
+  }
+  .footer-note a { color: #334155; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-eyebrow">
+      <span class="live-dot"></span>
+      Phishing Analyzer · v1.0
+    </div>
+    <h1>Phishing<br>Analyzer</h1>
+    <p>Paste a suspicious email and get an instant AI-powered threat assessment — social engineering tactics, spoofed senders, credential harvesting, malicious links, and more.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-header-left">
+        <span class="live-dot" style="background:#475569;animation:none"></span>
+        Email input
+      </div>
+      <span class="char-count" id="charCount">0 chars</span>
+    </div>
+    <textarea
+      id="emailInput"
+      placeholder="Paste the full email here — subject line, body, links, headers if you have them..."
+      oninput="updateCharCount()"
+    ></textarea>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="btn-row">
+    <button class="btn" id="analyzeBtn" onclick="analyze()">▶ Analyze Email</button>
+    <button class="btn-clear" onclick="clearAll()">✕ Clear</button>
+  </div>
+
+  <div class="loading" id="loading">
+    Scanning...
+    <div class="loading-steps" id="loadingStep">Sending to Claude...</div>
+    <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="results-topbar">
+      <span>Analysis Report</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyReport()">⎘ Copy Report</button>
+    </div>
+
+    <!-- Score -->
+    <div class="score-section" id="scoreSection">
+      <div class="score-row">
+        <div class="score-circle" id="scoreCircle">
+          <span class="score-number" id="scoreNumber">0</span>
+        </div>
+        <div class="score-meta">
+          <div class="score-level" id="scoreLevel">—</div>
+          <div class="score-sublabel" id="scoreSublabel">Threat score: 0 / 100</div>
+        </div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-track">
+          <div class="score-bar-fill" id="scoreBarFill"></div>
+        </div>
+        <div class="score-bar-labels">
+          <span>Safe</span><span>Suspicious</span><span>Phishing</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict" id="verdictBox" style="margin-top:14px"></div>
+
+    <!-- Findings -->
+    <div class="findings-header">Indicators found</div>
+    <div class="findings" id="findings"></div>
+
+    <!-- Report footer stamp -->
+    <div class="report-footer">
+      <span id="reportTimestamp"></span>
+      <span>Built with Claude API · Phishing Analyzer v1.0</span>
+    </div>
+
+  </div>
+
+  <p class="footer-note">
+    Built step by step with Claude · <a href="https://github.com" target="_blank">Add to your GitHub portfolio ↗</a>
+  </p>
+
+</div>
+
+<script>
+// ─── Loading messages — cycle through these while waiting ───
+const loadingMessages = [
+  'Reading email headers...',
+  'Scanning for urgency tactics...',
+  'Checking for spoofed domains...',
+  'Analyzing social engineering patterns...',
+  'Checking for credential requests...',
+  'Generating threat report...'
+];
+let loadingInterval = null;
+
+function startLoadingMessages() {
+  let i = 0;
+  document.getElementById('loadingStep').textContent = loadingMessages[0];
+  loadingInterval = setInterval(() => {
+    i = (i + 1) % loadingMessages.length;
+    document.getElementById('loadingStep').textContent = loadingMessages[i];
+  }, 1800);
+}
+function stopLoadingMessages() {
+  clearInterval(loadingInterval);
+}
+
+// ─── Char counter ───────────────────────────────────────────
+function updateCharCount() {
+  const len = document.getElementById('emailInput').value.length;
+  document.getElementById('charCount').textContent = `${len.toLocaleString()} chars`;
+}
+
+// ─── Clear all ──────────────────────────────────────────────
+function clearAll() {
+  document.getElementById('emailInput').value = '';
+  updateCharCount();
+  document.getElementById('results').classList.remove('visible');
+  hideError();
+}
+
+// ─── The prompt ─────────────────────────────────────────────
+function buildPrompt(emailText) {
+  return `You are a cybersecurity analyst specializing in phishing detection and email threat analysis.
+
+Analyze the following email for phishing indicators. Look carefully for:
+1. Urgency or fear tactics ("your account will be suspended", "act now", "verify immediately")
+2. Suspicious or spoofed sender patterns (mismatched domains, lookalike addresses)
+3. Credential harvesting attempts (requests for passwords, login links, personal info, card numbers)
+4. Suspicious links or domains (lookalike URLs, URL shorteners, mismatched anchor text vs href)
+5. Social engineering (impersonation of banks, tech companies, couriers, government agencies)
+6. Grammar anomalies, unusual formatting, or machine-translated phrasing
+7. Unusual attachment or download requests
+8. Too-good-to-be-true offers, prize claims, inheritance notices
+
+Respond ONLY with a valid JSON object — no preamble, no explanation, no markdown fences. Exact structure:
+
+{
+  "score": <integer 0-100>,
+  "level": "<LOW|MEDIUM|HIGH>",
+  "verdict": "<2-3 sentence plain English summary of what this email is and the overall risk>",
+  "findings": [
+    {
+      "title": "<short indicator name>",
+      "detail": "<specific explanation quoting or referencing actual content from the email>",
+      "severity": "<high|medium|low|info>"
+    }
+  ]
+}
+
+Scoring: 0-30 = likely legitimate, 31-65 = suspicious, 66-100 = likely phishing.
+Always return at least 1 finding. If the email looks clean, explain what signals suggest legitimacy.
+
+EMAIL:
+---
+${emailText}
+---`;
+}
+
+// ─── Main analyze function ───────────────────────────────────
+async function analyze() {
+  const emailText = document.getElementById('emailInput').value.trim();
+
+  if (!emailText) { showError('Paste an email first.'); return; }
+  if (emailText.length < 20) { showError('That\'s too short. Paste the full email content.'); return; }
+
+  setLoading(true);
+  hideError();
+  document.getElementById('results').classList.remove('visible');
+  startLoadingMessages();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: buildPrompt(emailText) }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API returned ${response.status}`);
+
+    const data = await response.json();
+    const rawText = data.content[0].text;
+
+    let analysis;
+    try {
+      analysis = JSON.parse(rawText);
+    } catch {
+      const match = rawText.match(/\{[\s\S]*\}/);
+      if (match) analysis = JSON.parse(match[0]);
+      else throw new Error('Response was not valid JSON.');
+    }
+
+    renderResults(analysis);
+
+  } catch (err) {
+    showError(`Analysis failed: ${err.message}`);
+  } finally {
+    stopLoadingMessages();
+    setLoading(false);
+  }
+}
+
+// ─── Render results ──────────────────────────────────────────
+function renderResults({ score, level, verdict, findings }) {
+  const safeScore = Math.max(0, Math.min(100, parseInt(score) || 0));
+  const theme = safeScore >= 66 ? 'high' : safeScore >= 31 ? 'mid' : 'low';
+  const levelText = theme === 'high' ? '⚠ High Threat' : theme === 'mid' ? '⚡ Suspicious' : '✓ Likely Safe';
+
+  // Score circle & bar
+  const section = document.getElementById('scoreSection');
+  section.className = `score-section theme-${theme}`;
+
+  document.getElementById('scoreNumber').textContent = safeScore;
+  document.getElementById('scoreLevel').textContent = levelText;
+  document.getElementById('scoreSublabel').textContent = `Threat score: ${safeScore} / 100`;
+
+  // Animate bar after short delay so transition fires
+  setTimeout(() => {
+    document.getElementById('scoreBarFill').style.width = `${safeScore}%`;
+  }, 80);
+
+  // Verdict
+  document.getElementById('verdictBox').innerHTML =
+    `<strong>Summary:</strong> ${verdict}`;
+
+  // Severity icons
+  const icons = { high:'🔴', medium:'🟡', low:'🟢', info:'🔵' };
+  const sevClass = { high:'sev-high', medium:'sev-medium', low:'sev-low', info:'sev-info' };
+
+  const findingsEl = document.getElementById('findings');
+  if (!findings || !findings.length) {
+    findingsEl.innerHTML = `<div class="finding"><div class="finding-detail">No specific indicators identified.</div></div>`;
+  } else {
+    findingsEl.innerHTML = findings.map(f => {
+      const sev = (f.severity || 'info').toLowerCase();
+      return `
+        <div class="finding">
+          <div class="finding-icon">${icons[sev] || '⚪'}</div>
+          <div class="finding-right">
+            <div class="finding-title-row">
+              <span class="finding-title">${f.title}</span>
+              <span class="sev ${sevClass[sev] || 'sev-info'}">${sev}</span>
+            </div>
+            <div class="finding-detail">${f.detail}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Timestamp
+  document.getElementById('reportTimestamp').textContent =
+    new Date().toLocaleString('en-GB', { dateStyle:'medium', timeStyle:'short' });
+
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── Copy report to clipboard ────────────────────────────────
+function copyReport() {
+  const score   = document.getElementById('scoreNumber').textContent;
+  const level   = document.getElementById('scoreLevel').textContent;
+  const verdict = document.getElementById('verdictBox').textContent;
+  const ts      = document.getElementById('reportTimestamp').textContent;
+
+  const findingEls = document.querySelectorAll('.finding');
+  const findingLines = [...findingEls].map(el => {
+    const title  = el.querySelector('.finding-title')?.textContent || '';
+    const sev    = el.querySelector('.sev')?.textContent || '';
+    const detail = el.querySelector('.finding-detail')?.textContent || '';
+    return `  [${sev.toUpperCase()}] ${title}\n  ${detail}`;
+  }).join('\n\n');
+
+  const report = `PHISHING ANALYSIS REPORT
+========================
+Date: ${ts}
+Threat Score: ${score}/100
+Level: ${level}
+
+${verdict}
+
+INDICATORS
+──────────
+${findingLines}
+
+─────────────────────────────
+Generated by Phishing Analyzer v1.0 · Built with Claude API`;
+
+  navigator.clipboard.writeText(report).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '⎘ Copy Report';
+      btn.classList.remove('copied');
+    }, 2500);
+  }).catch(() => {
+    showError('Copy failed — try selecting and copying the text manually.');
+  });
+}
+
+// ─── UI helpers ──────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loading').classList.toggle('visible', on);
+  document.getElementById('analyzeBtn').disabled = on;
+  document.getElementById('analyzeBtn').textContent = on ? '◌ Analyzing...' : '▶ Analyze Email';
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
+</script>
+</body>
+</html>
